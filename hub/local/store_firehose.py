@@ -104,7 +104,7 @@ if __name__ == '__main__':
     while True:
         status = test_hose.describe_delivery_stream(DeliveryStreamName=test_delivery_stream_name)
         if status['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
-            print('Created stream: ' + test_delivery_stream_name)
+            print('Stream ACTIVE: ' + test_delivery_stream_name)
             break
         time.sleep(1.0)
 
