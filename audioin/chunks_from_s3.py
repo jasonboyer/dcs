@@ -1,4 +1,4 @@
-''' Plays sound samples from a Kinesis Firehose blob
+''' Reconstructs sound samples from a Kinesis Firehose blob
 '''
 
 import time
@@ -7,6 +7,7 @@ import boto.s3
 import boto.s3.connection
 import numpy as np
 from matplotlib.backends.backend_pdf import PdfPages
+import pyaudio
 import queue
 import threading
 from features import mfcc
@@ -19,7 +20,7 @@ FFTSIZE = 512
 FFTKEEPSIZE = 257
 
 
-class PlayS3:
+class ChunksFromS3:
     def __init__(self, bucket_name, year, month, day, hour, rate, samples_per_record,
                  chunk, step, minute=0, output_queue=None):
         self.bucket_name = bucket_name
@@ -67,23 +68,34 @@ class PlayS3:
                 for sample in range(0, int((len(my_y) - self.chunk)/self.step)):
                     my_y_subset = my_y[sample*self.step:sample*self.step+self.chunk-1:1]
 
-                    # Do the math
-                    mfcc_feat = mfcc(my_y_subset, self.rate)
-                    fbank_feat = logfbank(my_y_subset, self.rate)
-
-                    # Send the features out to anyone who is listening
-                    self.output_queue.put_nowait(mfcc_feat)
+                    # Send the samples out to anyone who is listening
+                    self.output_queue.put_nowait(my_y_subset)
+        self.output_queue.put_nowait(None)
 
 if __name__ == '__main__':
     # execute only if run as a script
     # 'test_stream1446121778.355943'
     bucket = 'boyer-cs767-audio'
     output_queue = queue.Queue()
-    player = PlayS3(bucket_name=bucket, year=2015, month=11, day=5, hour=16, rate=96000, samples_per_record=96000/100, chunk=96000/40, step=96000/100, output_queue=output_queue)
+    player = ChunksFromS3(bucket_name=bucket, year=2015, month=11, day=5, hour=16, rate=96000, samples_per_record=96000/100, chunk=96000/40, step=96000/100, output_queue=output_queue)
     player.play_blob(19)
     player.play_blob(40)
 
-    # output_queue should have MFCCs
+    # output_queue should have samples
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paFloat32,
+                    channels=1,
+                    rate=96000,
+                    output=True)
+
     while True:
-        features = output_queue.get(True)
-        print(features)
+        data = output_queue.get(True)
+        if data is not None:
+            stream.write(data)
+        else:
+            break
+
+    stream.stop_stream()
+    stream.close()
+
+    p.terminate()
