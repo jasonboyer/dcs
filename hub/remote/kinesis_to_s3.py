@@ -36,10 +36,10 @@ STREAMNAME = "audiomon"
 if (VERBOSE):
     print("Kinesis regions: " + str(boto.kinesis.regions()))
 kin = boto.kinesis.connect_to_region(REGION)
-shit = kin.get_shard_iterator(stream_name=STREAMNAME,
-                              shard_id='shardId-000000000000',
-                              shard_iterator_type='AFTER_SEQUENCE_NUMBER',
-                              starting_sequence_number='49555268714976342660975793692755824344972400761954631682')
+shardit = kin.get_shard_iterator(stream_name=STREAMNAME,
+                                 shard_id='shardId-000000000000',
+                                 shard_iterator_type='AFTER_SEQUENCE_NUMBER',
+                                 starting_sequence_number='49555268714976342660975793692755824344972400761954631682')
 
 
 if (VERBOSE):
@@ -56,7 +56,7 @@ def callbackOut(in_data, frame_count, time_info, status):
     global seq
     global startTime
     global kin
-    global shit
+    global shardit
 
     if (VERBOSE) :
          print("in_data: " + str(in_data) + "frame_count: " + str(frame_count) + "time_info: " + str(time_info) + "status: " + str(status))

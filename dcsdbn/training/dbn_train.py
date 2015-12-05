@@ -2,11 +2,12 @@ __author__ = 'jasonboyer'
 ''' Adapted from http://deeplearning.net/tutorial/code/DBN.py
 '''
 
-import numpy
 import dcsdbn
 from dbn.DBN import DBN
 import dbn.logistic_sgd
+import numpy
 import os
+import pickle
 import sys
 import timeit
 
@@ -31,8 +32,8 @@ class DbnTrain:
 
         # construct the Deep Belief Network
         self.dbn = DBN(numpy_rng=numpy_rng, n_ins=number_of_inputs,
-                       hidden_layers_sizes=[1000, 400, 25],
-                       n_outs=4)
+                       hidden_layers_sizes=[1000, 1000, 1000],
+                       n_outs=50)
 
         # start-snippet-2
         #########################
@@ -165,3 +166,6 @@ class DbnTrain:
                os.path.split(__file__)[1] +
                ' ran for %.2fm' % ((end_time - start_time)/ 60.)),
               file=sys.stderr)
+
+        pickle.dump((train_fn, pretraining_fns, validate_model, test_model),
+                    'pickled_test_fn.pck')

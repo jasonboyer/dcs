@@ -56,12 +56,12 @@ class AudioProc(threading.Thread):
         status = self.kin.describe_stream(self.output_stream)
         if status['StreamDescription']['StreamStatus'] == 'ACTIVE':
             print('Stream is available: ' + self.output_stream)
-        shit = self.kin.get_shard_iterator(self.input_stream,
-                                           status['StreamDescription']['Shards'][0]['ShardId'],
-                                           self.starting_point)['ShardIterator']
+        shardit = self.kin.get_shard_iterator(self.input_stream,
+                                              status['StreamDescription']['Shards'][0]['ShardId'],
+                                              self.starting_point)['ShardIterator']
         while True:
-            record_batch = self.kin.get_records(shit, self.limit, False)
-            shit = record_batch['NextShardIterator']
+            record_batch = self.kin.get_records(shardit, self.limit, False)
+            shardit = record_batch['NextShardIterator']
             if len(record_batch['Records']) == 0:
                 # Don't call get_records in a tight loop when there is no data yet
                 # This avoids exceeding the AWS API limit of 5 calls per second
@@ -72,8 +72,8 @@ class AudioProc(threading.Thread):
             print('processing ' + str(len(record_batch['Records'])) + 'records')
             in_bytes = b'' # bytearray() # np.array('', np.bytes_)
             for rec in record_batch['Records']:
-                my_foo_wtf = base64.b64decode(rec['Data'])
-                in_bytes += my_foo_wtf
+                batch_bytes = base64.b64decode(rec['Data'])
+                in_bytes += batch_bytes
 
             # Convert byte array to sample array
             if len(in_bytes) > 0: # = self.samples_per_record:

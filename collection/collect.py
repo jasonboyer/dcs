@@ -16,7 +16,7 @@ import base64
 
 VERBOSE = False
 
-if (VERBOSE) :
+if VERBOSE:
     import pprint
     pp = pprint.PrettyPrinter()
 

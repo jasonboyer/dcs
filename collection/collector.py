@@ -6,7 +6,7 @@ import pyaudio
 import time, datetime
 
 VERBOSE = False
-if (VERBOSE) :
+if VERBOSE:
     import pprint
     pp = pprint.PrettyPrinter()
 
