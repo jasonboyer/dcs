@@ -8,6 +8,7 @@ REGION = 'us-east-1'
 
 # SQS Queue names
 HUB_QUEUE = 'dcs_hub_queue'
+BARK_QUEUE = 'dcs_bark_queue'
 
 # Messages
 # Requires ATTR_STREAM_NAME

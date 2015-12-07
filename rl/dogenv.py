@@ -42,7 +42,8 @@ class Sensors:
         self.volume = 0.0
 
     def asarray(self):
-        return [self.barking]
+        return numpy.asarray([self.barking, self.sound, self.volume])
+
 
 class DogEnv(SimpleEnvironment, Named):
     """ Dog Environment, with actions being the the playing of
@@ -93,6 +94,7 @@ class DogEnv(SimpleEnvironment, Named):
     stochObs = 0.
 
     def __init__(self, goal_state, init_state, event_queue, **args):
+        super().__init__()
         self.setArgs(**args)
         self.goal_state = goal_state
         self.init_state = init_state
@@ -119,6 +121,7 @@ class DogEnv(SimpleEnvironment, Named):
         for message in messages:
             if message[constants.ATTR_DOG_STATE] == constants.DOG_STATE_BARKING:
                 self.sensors.barking = 1.0
+        return self.sensors.asarray()
 
     def send_hub_message(self, action):
         cmess = boto.sqs.message.MHMessage()

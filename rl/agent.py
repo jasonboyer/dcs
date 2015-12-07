@@ -4,7 +4,7 @@ from pybrain.rl.agents.learning import LearningAgent
 
 class DogAgent(LearningAgent):
     def __init__(self, table, learner = None):
-        super(table, learner)
+        super().__init__(table, learner)
 
     # def getAction(self):
 

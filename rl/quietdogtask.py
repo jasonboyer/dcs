@@ -1,9 +1,14 @@
 import numpy as np
+from pybrain.rl.environments.simple import MinimizeTask
+from random import random, choice
+
+
 
 # Adapted from http://pybrain.org/docs/tutorial/reinforcement-learning.html
 
 class QuietDogTask(MinimizeTask):
     def __init__(self, env):
+        super().__init__(env)
         self.env = env
 
     def performAction(self, action):
