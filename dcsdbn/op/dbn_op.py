@@ -68,17 +68,18 @@ class DbnOp(threading.Thread):
         # load state from storage
         self.dbn = pickle.Unpickler.load(file)
 
-    def dog_is_barking(self):
+    def dog_is_barking(self, mfcc_rec):
         # Use a random process to start barking
         # then use exponential decay to determine
         # whether the dog is still barking
+        # TODO: This should be passing the mfcc_rec into the trained DBN
         num = np.random.rand()
         self.episode_time -= 1
-        if (self.episode_time > 0):
-            if (num < self.dist[self.episode_time]):
+        if self.episode_time > 0:
+            if num < self.dist[self.episode_time]:
                 return True
         else:
-            if (num < self.initial_prob):
+            if num < self.initial_prob:
                 self.episode_time = constants.EPISODE_TIME
                 return True
         return False

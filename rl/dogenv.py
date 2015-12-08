@@ -13,17 +13,26 @@ import time
 
 sounds = [None, 'thunder.wav', 'enh.wav', 'no.wav', 'rustycrate.wav']
 volume_levels = 4  # 0 = no sound, 3 = high volume
+rewards = [constants.REWARD_SOUND_NONE,
+           constants.REWARD_SOUND_LOW,
+           constants.REWARD_SOUND_MEDIUM,
+           constants.REWARD_SOUND_LOUD]
 
 # Code adapted from http://stackoverflow.com/questions/4877624/numpy-array-of-objects
 class ActionPlay:
     global sounds
 
-    def __init__(self, sound_index, volume_level):
-        self.sound_file = sounds[sound_index]
-        self.volume_level = volume_level
+    def __init__(self, action):
+
+        self.sound_index = int(action/volume_levels) % len(sounds)
+        self.sound_file = sounds[self.sound_index]
+        self.volume_level = action % volume_levels
+
+    def get_sound_index(self):
+        return self.sound_index
 
     def get_sound_file(self):
-        return sounds[self.sound_index]
+        return self.sound_file
 
     def set_sound_file(self, sound_index):
         self.sound_file = sounds[sound_index]
@@ -34,15 +43,24 @@ class ActionPlay:
     def set_volume_level(self, volume_level):
         self.volume_level = volume_level
 
+    def get_reward(self):
+        return self.rewards[self.volume_level]
+
 # Class to hold measured state about the outside world
 class Sensors:
     def __init__(self):
-        self.barking = 0.0
-        self.sound = 0.0
-        self.volume = 0.0
+        self.barking = 0
+        self.sound = 0
+        self.volume = 0
 
+    # Convert the three environmental mesasurements into a single number representing the
+    # current state. Think of two layers of blocks, with the bottom layer being
+    # dog not barking (0) and the top layer being dog barking (1). Within a layer,
+    # the row is selected by which sound is playing, and the column by the volume
     def asarray(self):
-        return numpy.asarray([self.barking, self.sound, self.volume])
+        return numpy.asarray([self.barking*len(sounds)*volume_levels+
+                              self.sound*volume_levels+
+                              self.volume])
 
 
 class DogEnv(SimpleEnvironment, Named):
@@ -79,19 +97,22 @@ class DogEnv(SimpleEnvironment, Named):
 #    init_arry = numpy.arange(len(sounds) * volume_levels).\
 #        reshape((len(sounds), volume_levels))
 
-    allActions = numpy.empty((len(sounds), volume_levels), dtype=object)
+    all_actions = numpy.empty((len(sounds)*volume_levels), dtype=object)
     for i in range(len(sounds)):
         for j in range(volume_levels):
-            allActions[i, j] = ActionPlay(i, j)
+            all_actions[i*volume_levels+j]= ActionPlay(i*volume_levels+j)
 
-    allStates = list(range(volume_levels))
-    DOG_QUIET = volume_levels
-    DOG_BARKING = DOG_QUIET + 1
-    allStates += [DOG_QUIET, DOG_BARKING]
+    # Target and starting point
+    ALL_QUIET = 0
+
+    # allStates = list(range(volume_levels))
+    # DOG_QUIET = volume_levels
+    # DOG_BARKING = DOG_QUIET + 1
+    # allStates += [DOG_QUIET, DOG_BARKING]
 
     # stochasticity
-    stochAction = 0.
-    stochObs = 0.
+    stochAction = 0
+    stochObs = 0
 
     def __init__(self, goal_state, init_state, event_queue, **args):
         super().__init__()
@@ -105,23 +126,42 @@ class DogEnv(SimpleEnvironment, Named):
         print('DogEnv.performAction() called')
         if self.stochAction > 0:
             if random() < self.stochAction:
-                action_sound_index = choice(list(range(self.allActions.shape[0])))
-                action_volume = choice(list(range(self.allActions.shape[1])))
-                action = self.allActions[action_sound_index, action_volume]
-        if action.get_volume_level() > 0 and action.get_sound_file() is not None:
-            self.send_hub_message(action)
+                action = choice(list(range(len(self.all_actions))))
+        action_play = self.all_actions[action]
+        self.update(action_play)
+        if action_play.get_volume_level() > 0 and action_play.get_sound_file() is not None:
+            self.send_hub_message(action_play)
 
-    def update(self):
+    def update(self, action_play):
         print('DogEnv.update() called')
+        self.sensors.sound = action_play.get_sound_index()
+        self.sensors.volume = action_play.get_volume_level()
 
 
     def getSensors(self):
         print('DogEnv.getSensors() called')
-        messages = self.event_queue.get_messages()
+        messages = []
+        while len(messages) < constants.RL_MESS_CHUNK:
+            messages += self.event_queue.get_messages(constants.RL_MESS_CHUNK - len(messages))
         for message in messages:
             if message[constants.ATTR_DOG_STATE] == constants.DOG_STATE_BARKING:
-                self.sensors.barking = 1.0
+                self.sensors.barking = 1
         return self.sensors.asarray()
+
+    def f(self, state):
+        global rewards
+        ret = []
+        for i in range(len(state)):
+            ret.append(0)
+            # penalize dog barking state
+            ret[i] += constants.REWARD_DOG_BARKING * state[i]/(len(sounds)*volume_levels)
+            # This condition check whether a sound is being played.
+            # If so, penalize based on the
+            volume = state[i] % volume_levels
+            sound = int(state[i]/volume_levels) % len(sounds)
+            if sounds[sound] is not None:
+                ret[i] += rewards[volume]
+        return ret
 
     def send_hub_message(self, action):
         cmess = boto.sqs.message.MHMessage()

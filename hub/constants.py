@@ -7,7 +7,8 @@ VERBOSE = False
 REGION = 'us-east-1'
 
 # SQS Queue names
-HUB_QUEUE = 'dcs_hub_queue'
+HUB_QUEUE_UP = 'dcs_hub_queue'
+HUB_QUEUE_DOWN = 'dcs_hub_queue_down'
 BARK_QUEUE = 'dcs_bark_queue'
 
 # Messages
@@ -46,3 +47,13 @@ MFCCS_PER_RECORD = 10
 ATTR_SOUND_FILE = 'SoundFile'
 ATTR_VOLUME_LEVEL = 'VolumeLevel'
 
+# Reinforcement learning parameters
+RL_MESS_CHUNK = 10
+REWARD_DOG_BARKING = -100
+REWARE_DOG_QUIET = 1
+REWARD_SOUND_LOUD = -20
+REWARD_SOUND_MEDIUM = -10
+REWARD_SOUND_LOW = -5
+REWARD_SOUND_NONE = 0
+
+EPISODE_TIME = 300

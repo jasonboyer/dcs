@@ -46,7 +46,7 @@ class RlOp(threading.Thread):
         super().__init__()
         # create environment
         self.event_queue = event_queue
-        self.env = DogEnv(DogEnv.DOG_QUIET, DogEnv.DOG_QUIET, self.event_queue)
+        self.env = DogEnv(DogEnv.ALL_QUIET, DogEnv.ALL_QUIET, self.event_queue)
         self.env.delay = (self.episodes == 1)
 
 #if len(sys.argv) < 5:
@@ -82,7 +82,7 @@ class RlOp(threading.Thread):
 
         # create value table and initialize with ones
         # TODO: Get number of states from DogEnv
-        self.table = ActionValueTable(6, 5*4)
+        self.table = ActionValueTable(2*5*4, 5*4)
         self.table.initialize(1.)
 
         # create agent with controller and learner - use SARSA(), Q() or QLambda() here
@@ -114,8 +114,8 @@ class RlOp(threading.Thread):
             self.agent.reset()
 
             # and draw the table
-            # pylab.pcolor(self.table.params.reshape(81,4).max(1).reshape(9,9))
-            # pylab.draw()
+            pylab.pcolor(self.table.params.reshape(2,5,4))
+            pylab.draw()
 
 if __name__ == '__main__':
     conn = boto.sqs.connect_to_region(constants.REGION)
@@ -125,23 +125,16 @@ if __name__ == '__main__':
     rlop = RlOp(test_queue)
 #    rlop.start()
 #    time.sleep(1)
-    for i in range(100):
-        bark_mess = MHMessage(test_queue)
-        bark_mess[constants.ATTR_DOG_STATE] = constants.DOG_STATE_QUIET
-        time.sleep(0.1)
-        test_queue.write(bark_mess)
+    for k in range(15):
+        for i in range(100):
+            bark_mess = MHMessage(test_queue)
+            bark_mess[constants.ATTR_DOG_STATE] = constants.DOG_STATE_QUIET
+            test_queue.write(bark_mess)
 
-    for i in range(100):
-        bark_mess = MHMessage(test_queue)
-        bark_mess[constants.ATTR_DOG_STATE] = constants.DOG_STATE_BARKING
-        time.sleep(0.1)
-        test_queue.write(bark_mess)
-
-    for i in range(100):
-        bark_mess = MHMessage(test_queue)
-        bark_mess[constants.ATTR_DOG_STATE] = constants.DOG_STATE_QUIET
-        time.sleep(0.1)
-        test_queue.write(bark_mess)
+        for i in range(100):
+            bark_mess = MHMessage(test_queue)
+            bark_mess[constants.ATTR_DOG_STATE] = constants.DOG_STATE_BARKING
+            test_queue.write(bark_mess)
 
     rlop.call_run()
 

@@ -26,7 +26,8 @@ class RemoteHub:
             # setup_dcs.setup_dcs()
             print('Hub queue is not set up')
             exit(-1)
-        self.hub_queue = self.conn.get_queue(constants.HUB_QUEUE)
+        self.hub_queue = self.conn.get_queue(constants.HUB_QUEUE_UP)
+        self.hub_queue_down = self.conn.get_queue(constants.HUB_QUEUE_DOWN)
         self.episode_time = 0
 
     def run(self):
@@ -71,6 +72,9 @@ class RemoteHub:
     def report_barking_state(self):
         if (self.episode_time > 0):
             self.episode_time -= 1
+
+    def output_sound(self, sound_file, volume_level):
+        m = mess.MHMessage(hub_queue_down)
 
 
 
