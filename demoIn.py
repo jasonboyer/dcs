@@ -5,11 +5,11 @@ import wave
  
 FORMAT = pyaudio.paInt16
 CHANNELS = 2
-RATE = 44100
-#CHUNK = 1024
-CHUNK = 1
+RATE = 96000
+CHUNK = 1024
+#CHUNK = 1
 RECORD_SECONDS = 5
-WAVE_OUTPUT_FILENAME = "file.wav"
+WAVE_OUTPUT_FILENAME = "rustycrate.wav"
  
 audio = pyaudio.PyAudio()
  
@@ -20,7 +20,7 @@ stream = audio.open(format=FORMAT, channels=CHANNELS,
 print ("recording...")
 frames = []
  
-for i in range(0, 25): # int(RATE / CHUNK * RECORD_SECONDS)):
+for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
     data = stream.read(CHUNK)
     frames.append(data)
 print ("finished recording")

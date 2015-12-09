@@ -18,16 +18,16 @@ class FeatMessage(boto.sqs.message.Message):
 
     def encode(self, value):
         self.buf = ''
-        for val in self.mfcc:
+        for val in value[0]:
             self.buf += '{:f} '.format(val)
         return self.buf
 
     def decode(self, value):
         mfcc_strings = re.split(r'\s+', value.strip())
-        self.mfcc = []
+        self.mfcc = [[]]
         for mfcc_string in mfcc_strings:
-            self.mfcc.append(float(mfcc_string))
-        return self.mfcc
+            self.mfcc[0].append(float(mfcc_string))
+        return numpy.array(self.mfcc)
 
     def __len__(self):
         return len(self.buf)
@@ -45,7 +45,10 @@ if __name__ == '__main__':
     p = re.compile('\.')
     test_queue = conn.create_queue('test_queue'.join(p.split(str(time.time()))))
     test_queue.set_message_class(FeatMessage)
-    mfcc = numpy.arange(0, 5.55555555, 5.55555555/3, numpy.float32)
+    mfcc = numpy.array([[ -7.32467121, -25.97041822, -50.75685508,  -1.40651625,
+         -4.79041864,  57.36522094,  12.11778282, -48.33852065,
+         45.76385218, -23.35362879, -15.63036292,  32.56883989,
+         -8.71614269]])
     mess = FeatMessage(body=mfcc, queue=test_queue)
     test_queue.write(mess)
     done = False

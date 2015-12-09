@@ -42,11 +42,13 @@ import threading
 class RlOp(threading.Thread):
     episodes = 1
     epilen = 200
-    def __init__(self, event_queue):
+    def __init__(self, event_queue_name, hub_queue_name):
         super().__init__()
         # create environment
-        self.event_queue = event_queue
-        self.env = DogEnv(DogEnv.ALL_QUIET, DogEnv.ALL_QUIET, self.event_queue)
+        self.conn = boto.sqs.connect_to_region(constants.REGION)
+        self.event_queue = self.conn.get_queue(event_queue_name)
+        self.event_queue.set_message_class(MHMessage)
+        self.env = DogEnv(DogEnv.ALL_QUIET, DogEnv.ALL_QUIET, self.event_queue, hub_queue_name)
         self.env.delay = (self.episodes == 1)
 
 #if len(sys.argv) < 5:
@@ -103,8 +105,8 @@ class RlOp(threading.Thread):
     def call_run(self):
         print('RlOp: running')
         # prepare plotting
-        pylab.gray()
-        pylab.ion()
+        #pylab.gray()
+        #pylab.ion()
 
         for i in range(1000):
 
@@ -114,8 +116,8 @@ class RlOp(threading.Thread):
             self.agent.reset()
 
             # and draw the table
-            pylab.pcolor(self.table.params.reshape(2,5,4))
-            pylab.draw()
+            #pylab.pcolor(self.table.params.reshape(2,5,4))
+            #pylab.draw()
 
 if __name__ == '__main__':
     conn = boto.sqs.connect_to_region(constants.REGION)

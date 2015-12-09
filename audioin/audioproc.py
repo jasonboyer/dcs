@@ -10,6 +10,8 @@ import base64
 import boto.kinesis
 from features import mfcc
 from features import logfbank
+from hub import constants
+from hub.feat_message import FeatMessage
 import numpy as np
 from matplotlib.backends.backend_pdf import PdfPages
 import queue
@@ -22,11 +24,10 @@ FFTKEEPSIZE = 257
 
 
 class AudioProc(threading.Thread):
-    def __init__(self, input_stream, output_stream, rate, samples_per_record,
+    def __init__(self, input_stream_name, output_queue_name, rate, samples_per_record,
                  chunk, step, starting_point='LATEST'):
         super().__init__()
-        self.input_stream = input_stream
-        self.output_stream = output_stream
+        self.input_stream = input_stream_name
         self.rate = rate
         self.samples_per_record = int(samples_per_record)
         self.chunk = int(chunk)
@@ -38,24 +39,30 @@ class AudioProc(threading.Thread):
         self.fft_size = FFTSIZE
         self.fft_keep_size = FFTKEEPSIZE
         self.region = REGION
-        if VERBOSE:
-            print('Kinesis regions: ' + str(boto.kinesis.regions()))
+        #if VERBOSE:
+        print('Kinesis regions: ' + str(boto.kinesis.regions()))
         self.kin = boto.kinesis.connect_to_region(self.region)
-        if VERBOSE:
-            print('Available streams: ' + str(self.kin.list_streams()))
+        #if VERBOSE:
+        print('Available streams: ' + str(self.kin.list_streams()))
         self.limit = 100
+        # Make sure boto has its own connection for this thread
+        self.conn = boto.sqs.connect_to_region(self.region)
+        self.output_queue = self.conn.get_queue(output_queue_name)
+        self.output_queue.set_message_class(FeatMessage)
 
     def run(self):
         # For unit testing, have a separate function body
         self.call_run()
 
     def call_run(self):
+        print('audioproc: self.input_stream: ' + self.input_stream)
         status = self.kin.describe_stream(self.input_stream)
         if status['StreamDescription']['StreamStatus'] == 'ACTIVE':
             print('Stream is available: ' + self.input_stream)
-        status = self.kin.describe_stream(self.output_stream)
-        if status['StreamDescription']['StreamStatus'] == 'ACTIVE':
-            print('Stream is available: ' + self.output_stream)
+        #print('audioproc: self.output_queue: ' + self.output_queue)
+        #status = self.kin.describe_stream(self.output_queue)
+        #if status['StreamDescription']['StreamStatus'] == 'ACTIVE':
+        #    print('Stream is available: ' + self.output_stream)
         shardit = self.kin.get_shard_iterator(self.input_stream,
                                               status['StreamDescription']['Shards'][0]['ShardId'],
                                               self.starting_point)['ShardIterator']
@@ -85,21 +92,25 @@ class AudioProc(threading.Thread):
 
                 # Do the math
                 mfcc_feat = mfcc(my_y_subset, self.rate)
-                fbank_feat = logfbank(my_y_subset, self.rate)
+                #fbank_feat = logfbank(my_y_subset, self.rate)
 
                 # Send the features out to anyone who is listening
-                self.output_queue.put_nowait(mfcc_feat)
+                mess = FeatMessage(body=mfcc_feat, queue=self.output_queue)
+                self.output_queue.write(mess)
 
 if __name__ == '__main__':
     # execute only if run as a script
     # 'test_stream1446121778.355943'
-    input_stream = 'test_stream1446310304.28351'
-    output_stream = 'dcs_feature_stream'
-    proc = AudioProc(input_stream, output_stream, 96000, 96000/100, 96000/40, 96000/100,
+    input_stream = 'data_stream1449633467.770991'
+    output_queue_name = '1449633537feature_queue784543'
+    conn = boto.sqs.connect_to_region(constants.REGION)
+    output_queue = conn.get_queue(output_queue_name)
+
+    proc = AudioProc(input_stream, output_queue, 96000, 96000/100, 96000/40, 96000/100,
                      'TRIM_HORIZON')
     proc.call_run()
 
     # output_queue should have MFCCs
     while True:
-        features = output_queue.get(True)
+        features = output_queue.read()
         print(features)

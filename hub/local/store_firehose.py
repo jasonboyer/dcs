@@ -8,7 +8,7 @@ import threading
 import time
 
 
-# Store to AWS Kinesis in raw format
+# Store to AWS Kinesis Firehose in raw format
 
 
 class StoreFirehose(IStore):

@@ -2,13 +2,16 @@
 
 import boto.sqs
 import boto.sqs.message
+from boto.sqs.message import MHMessage
 from hub import constants
 import numpy
 from pybrain.utilities import Named
 from pybrain.rl.environments.simple import SimpleEnvironment
 from random import random, choice
 import re
+import queue
 from scipy import zeros
+import threading
 import time
 
 sounds = [None, 'thunder.wav', 'enh.wav', 'no.wav', 'rustycrate.wav']
@@ -63,6 +66,28 @@ class Sensors:
                               self.volume])
 
 
+class HubSender(threading.Thread):
+    def __init__(self, hub_queue_name, source_queue):
+        super().__init__()
+        self.source_queue = source_queue
+        self.conn = boto.sqs.connect_to_region(constants.REGION)
+        self.hub_queue = self.conn.get_queue(hub_queue_name)
+        self.hub_queue.set_message_class(MHMessage)
+
+    def run(self):
+        while True:
+            action = self.source_queue.get(True)
+            print('HubSender: sending message ' + action.get_sound_file() + ' ' + str(action.get_volume_level()))
+            self.send_hub_message(action)
+
+    def send_hub_message(self, action):
+        cmess = MHMessage(self.hub_queue)
+        cmess[constants.ATTR_COMMAND] = constants.PLAY_SOUND
+        cmess[constants.ATTR_SOUND_FILE] = action.get_sound_file()
+        cmess[constants.ATTR_VOLUME_LEVEL] = action.get_volume_level()
+        self.hub_queue.write(cmess)
+
+
 class DogEnv(SimpleEnvironment, Named):
     """ Dog Environment, with actions being the the playing of
     sounds.
@@ -114,13 +139,20 @@ class DogEnv(SimpleEnvironment, Named):
     stochAction = 0
     stochObs = 0
 
-    def __init__(self, goal_state, init_state, event_queue, **args):
+    def __init__(self, goal_state, init_state, event_queue, hub_queue_name, **args):
         super().__init__()
         self.setArgs(**args)
         self.goal_state = goal_state
         self.init_state = init_state
+        # Make sure boto has its own connection for this thread
+        self.conn = boto.sqs.connect_to_region(constants.REGION)
         self.event_queue = event_queue
+#        self.event_queue = self.conn.get_queue(event_queue_name)
+#        self.event_queue.set_message_class(MHMessage)
         self.sensors = Sensors()
+        self.source_queue = queue.Queue()
+        self.hub_sender = HubSender(hub_queue_name, self.source_queue)
+        self.hub_sender.start()
 
     def performAction(self, action):
         print('DogEnv.performAction() called')
@@ -130,7 +162,8 @@ class DogEnv(SimpleEnvironment, Named):
         action_play = self.all_actions[action]
         self.update(action_play)
         if action_play.get_volume_level() > 0 and action_play.get_sound_file() is not None:
-            self.send_hub_message(action_play)
+            print('Putting sound message in Python queue: ' + action_play.get_sound_file() + ' ' + str(action_play.get_volume_level()))
+            self.source_queue.put_nowait(action_play)
 
     def update(self, action_play):
         print('DogEnv.update() called')
@@ -144,6 +177,7 @@ class DogEnv(SimpleEnvironment, Named):
         while len(messages) < constants.RL_MESS_CHUNK:
             messages += self.event_queue.get_messages(constants.RL_MESS_CHUNK - len(messages))
         for message in messages:
+            print('DogEnv: SQS message received: ' + str(message.get_body()))
             if message[constants.ATTR_DOG_STATE] == constants.DOG_STATE_BARKING:
                 self.sensors.barking = 1
         return self.sensors.asarray()
@@ -163,20 +197,17 @@ class DogEnv(SimpleEnvironment, Named):
                 ret[i] += rewards[volume]
         return ret
 
-    def send_hub_message(self, action):
-        cmess = boto.sqs.message.MHMessage()
-        cmess[constants.ATTR_COMMAND] = constants.PLAY_SOUND
-        cmess[constants.ATTR_SOUND_FILE] = action.get_sound_file()
-        cmess[constants.ATTR_VOLUME_LEVEL] = action.get_volume_level()
-        self.event_queue.write(cmess)
-
     def __str__(self):
         return ''
 
 if __name__ == '__main__':
     conn = boto.sqs.connect_to_region(constants.REGION)
     p = re.compile('\.')
-    test_queue = conn.create_queue('test_queue'.join(p.split(str(time.time()))))
-    dogenv = DogEnv(0, 0, test_queue)
+    test_queue_name = 'test_queue'.join(p.split(str(time.time())))
+    hub_queue_name = 'hub_queue'.join(p.split(str(time.time())))
+    dogenv = DogEnv(0, 0, test_queue_name)
+    test_queue = conn.get_queue(test_queue_name)
     conn.delete_queue(test_queue)
+    hub_queue = conn.get_queue(hub_queue_name)
+    conn.delete_queue(hub_queue)
     print('Done')

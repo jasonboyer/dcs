@@ -10,6 +10,7 @@ REGION = 'us-east-1'
 HUB_QUEUE_UP = 'dcs_hub_queue'
 HUB_QUEUE_DOWN = 'dcs_hub_queue_down'
 BARK_QUEUE = 'dcs_bark_queue'
+EVENT_QUEUE = 'dcs_rl_event_queue'
 
 # Messages
 # Requires ATTR_STREAM_NAME
