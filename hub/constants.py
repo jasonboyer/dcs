@@ -42,7 +42,7 @@ RECORDS_PER_PUT = 4
 
 # Feature processing parameters
 MFCC_SIZE = 13
-MFCCS_PER_RECORD = 10
+MFCCS_PER_RECORD = 50
 
 # Sound playing parameters
 ATTR_SOUND_FILE = 'SoundFile'
@@ -52,7 +52,7 @@ SOUNDS = [None, 'thunder.wav', 'enh.wav', 'no.wav', 'rustycrate.wav']
 # Reinforcement learning parameters
 RL_MESS_CHUNK = 10
 REWARD_DOG_BARKING = -100
-REWARE_DOG_QUIET = 1
+REWARD_DOG_QUIET = 1
 REWARD_SOUND_LOUD = -20
 REWARD_SOUND_MEDIUM = -10
 REWARD_SOUND_LOW = -5

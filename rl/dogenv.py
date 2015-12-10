@@ -14,22 +14,28 @@ from scipy import zeros
 import threading
 import time
 
+# Setup sounds, volumes, and rewards/punishments
 sounds = constants.SOUNDS
 volume_levels = 4  # 0 = no sound, 3 = high volume
-rewards = [constants.REWARD_SOUND_NONE,
-           constants.REWARD_SOUND_LOW,
-           constants.REWARD_SOUND_MEDIUM,
-           constants.REWARD_SOUND_LOUD]
+volume_rewards = [constants.REWARD_SOUND_NONE,
+                  constants.REWARD_SOUND_LOW,
+                  constants.REWARD_SOUND_MEDIUM,
+                  constants.REWARD_SOUND_LOUD]
+reward_tmp = numpy.array(range(2 * volume_levels * len(sounds))).reshape(2, volume_levels, len(sounds))
+for x in range(volume_levels):
+    reward_tmp[0][x].fill(volume_rewards[x]+constants.REWARD_DOG_QUIET)
+    reward_tmp[1][x].fill(volume_rewards[x]+constants.REWARD_DOG_BARKING)
+rewards = reward_tmp.reshape(2*volume_levels*len(sounds))
 
 # Code adapted from http://stackoverflow.com/questions/4877624/numpy-array-of-objects
 class ActionPlay:
     global sounds
 
-    def __init__(self, action):
+    def __init__(self, volume_level, sound_index):
 
-        self.sound_index = int(action/volume_levels) % len(sounds)
+        self.sound_index = sound_index
         self.sound_file = sounds[self.sound_index]
-        self.volume_level = action % volume_levels
+        self.volume_level = volume_level
 
     def get_sound_index(self):
         return self.sound_index
@@ -45,9 +51,6 @@ class ActionPlay:
 
     def set_volume_level(self, volume_level):
         self.volume_level = volume_level
-
-    def get_reward(self):
-        return self.rewards[self.volume_level]
 
 # Class to hold measured state about the outside world
 class Sensors:
@@ -123,9 +126,9 @@ class DogEnv(SimpleEnvironment, Named):
 #        reshape((len(sounds), volume_levels))
 
     all_actions = numpy.empty((len(sounds)*volume_levels), dtype=object)
-    for i in range(len(sounds)):
-        for j in range(volume_levels):
-            all_actions[i*volume_levels+j]= ActionPlay(i*volume_levels+j)
+    for i in range(volume_levels):
+        for j in range(len(sounds)):
+            all_actions[i*len(sounds)+j] = ActionPlay(i, j)
 
     # Target and starting point
     ALL_QUIET = 0
@@ -186,15 +189,7 @@ class DogEnv(SimpleEnvironment, Named):
         global rewards
         ret = []
         for i in range(len(state)):
-            ret.append(0)
-            # penalize dog barking state
-            ret[i] += constants.REWARD_DOG_BARKING * state[i]/(len(sounds)*volume_levels)
-            # This condition check whether a sound is being played.
-            # If so, penalize based on the
-            volume = state[i] % volume_levels
-            sound = int(state[i]/volume_levels) % len(sounds)
-            if sounds[sound] is not None:
-                ret[i] += rewards[volume]
+            ret.append(rewards[state])
         return ret
 
     def __str__(self):

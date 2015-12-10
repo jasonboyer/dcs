@@ -3,21 +3,10 @@
 
 from __future__ import print_function
 
-###########################################################################
-# This program takes 4 parameters at the command line and runs the
-# (single) cartpole environment with it, visualizing the cart and the pole.
-# if cart is green, no penalty is given. if the cart is blue, a penalty of
-# -1 per step is given. the program ends with the end of the episode. if
-# the variable "episodes" is changed to a bigger number, the task is executed
-# faster and the mean return of all episodes is printed.
-###########################################################################
-
 import boto.sqs.message
 from boto.sqs.message import MHMessage
 from hub import constants
-from pybrain.tools.shortcuts import buildNetwork
-from pybrain.rl.agents.learning import LearningAgent
-from pybrain.rl.experiments import EpisodicExperiment
+import pprint
 import re
 from rl.agent import DogAgent
 from rl.dogenv import DogEnv
@@ -38,6 +27,7 @@ from pybrain.rl.experiments import Experiment
 from pybrain.rl.environments import Task
 import threading
 
+pp = pprint.PrettyPrinter()
 
 class RlOp(threading.Thread):
     episodes = 1
@@ -50,10 +40,6 @@ class RlOp(threading.Thread):
         self.event_queue.set_message_class(MHMessage)
         self.env = DogEnv(DogEnv.ALL_QUIET, DogEnv.ALL_QUIET, self.event_queue, hub_queue_name)
         self.env.delay = (self.episodes == 1)
-
-#if len(sys.argv) < 5:
-#    sys.exit('please give 4 parameters. run: "python play_catpole.py <p1> <p2> <p3> <p4>"\n')
-
 
         # create task
         self.task = QuietDogTask(self.env)
@@ -81,19 +67,34 @@ class RlOp(threading.Thread):
     def call_run(self):
         print('RlOp: running')
         # prepare plotting
-        #pylab.gray()
-        #pylab.ion()
+        pylab.gray()
+        pylab.ion()
 
         for i in range(1000):
 
             # interact with the environment (here in batch mode)
-            self.experiment.doInteractions(10000)
+            self.experiment.doInteractions(100)
             self.agent.learn()
             self.agent.reset()
 
+            results0 = self.table.params.reshape(2, 4, 5, 20)[0]
+            results1 = self.table.params.reshape(2, 4, 5, 20)[1]
+            pp.pprint(results0.argmax(2))
+            pp.pprint(results1.argmax(2))
+
             # and draw the table
-            #pylab.pcolor(self.table.params.reshape(2,5,4))
-            #pylab.draw()
+            #ar=self.table.params.reshape(2,5,4,5,4)
+            #for state1 in range(len(constants.SOUNDS)):
+            #    for state2 in range(4):
+            #        pylab.pcolor(ar[1][state1][state2])
+            #        pylab.draw()
+
+        results0 = self.table.params.reshape(2, 4, 5, 20)[0]
+        results1 = self.table.params.reshape(2, 4, 5, 20)[1]
+        while True:
+            time.sleep(60)
+            pp.pprint(results0.argmax(2))
+            pp.pprint(results1.argmax(2))
 
 if __name__ == '__main__':
     conn = boto.sqs.connect_to_region(constants.REGION)
