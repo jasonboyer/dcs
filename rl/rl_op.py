@@ -58,30 +58,6 @@ class RlOp(threading.Thread):
         # create task
         self.task = QuietDogTask(self.env)
 
-        # create controller network
-        # TODO: hmm, don't think we need a network.
-        # figure out how to remove it
-        # self.net = buildNetwork(4, 1, bias=False)
-
-        # create agent and set parameters from command line
-        # self.agent = DogAgent(self.net, None)
-        # self.agent.module._setParameters(0.0, 0.0)
-
-        # create experiment
-        # self.experiment = EpisodicExperiment(task, self.agent)
-        # self.experiment.doEpisodes(self.episodes)
-
-        # run environment
-        # ret = []
-        # for n in range(self.agent.history.getNumSequences()):
-        #     returns = self.agent.history.getSequence(n)
-        #     reward = returns[2]
-        #     ret.append(sum(reward, 0).item() )
-
-        # print results
-        # print(ret, "mean:",mean(ret))
-        # env.getRenderer().stop()
-
         # create value table and initialize with ones
         # TODO: Get number of states from DogEnv
         self.table = ActionValueTable(2*5*4, 5*4)
@@ -111,7 +87,7 @@ class RlOp(threading.Thread):
         for i in range(1000):
 
             # interact with the environment (here in batch mode)
-            self.experiment.doInteractions(100)
+            self.experiment.doInteractions(10000)
             self.agent.learn()
             self.agent.reset()
 

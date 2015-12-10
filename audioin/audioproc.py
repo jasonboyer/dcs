@@ -59,10 +59,21 @@ class AudioProc(threading.Thread):
         status = self.kin.describe_stream(self.input_stream)
         if status['StreamDescription']['StreamStatus'] == 'ACTIVE':
             print('Stream is available: ' + self.input_stream)
+
+        # could also use Kinesis stream
         #print('audioproc: self.output_queue: ' + self.output_queue)
         #status = self.kin.describe_stream(self.output_queue)
         #if status['StreamDescription']['StreamStatus'] == 'ACTIVE':
         #    print('Stream is available: ' + self.output_stream)
+
+        # TODO: catch boto.kinesis.exceptions.ExpiredIteratorException:
+        # ExpiredIteratorException: 400 Bad Request
+        # {'__type': 'ExpiredIteratorException', 'message':
+        # 'Iterator expired. The iterator was created at time
+        # Thu Dec 10 01:59:39 UTC 2015 while right now it is
+        # Thu Dec 10 02:06:15 UTC 2015 which is further in the
+        # future than the tolerated delay of 300000 milliseconds.'}
+
         shardit = self.kin.get_shard_iterator(self.input_stream,
                                               status['StreamDescription']['Shards'][0]['ShardId'],
                                               self.starting_point)['ShardIterator']

@@ -14,7 +14,7 @@ from scipy import zeros
 import threading
 import time
 
-sounds = [None, 'thunder.wav', 'enh.wav', 'no.wav', 'rustycrate.wav']
+sounds = constants.SOUNDS
 volume_levels = 4  # 0 = no sound, 3 = high volume
 rewards = [constants.REWARD_SOUND_NONE,
            constants.REWARD_SOUND_LOW,

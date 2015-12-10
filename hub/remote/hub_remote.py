@@ -11,10 +11,11 @@ import boto.sqs
 import boto.sqs.message as mess
 import boto3
 from dcsdbn.op import dbn_op
-from rl import rl_op
 from hub import constants
+import numpy as np
 import queue
 import re
+from rl import rl_op
 import time
 
 
@@ -60,6 +61,7 @@ class RemoteHub:
             if self.conn.lookup(self.feature_queue_name):
                 break;
             time.sleep(1.0)
+        self.dog_affected_prob = 0.0
 
     def run(self):
         while True:
@@ -130,6 +132,14 @@ class RemoteHub:
 
     # Tell the reinforcement learning module the current barking state
     def report_barking_state(self, state_mess):
+        # Simulate effect on dog
+        if self.dog_affected_prob > 0:
+            if state_mess[constants.ATTR_DOG_STATE] == constants.DOG_STATE_BARKING:
+                p = np.random.rand()
+                if p < self.dog_affected_prob:
+                    state_mess[constants.ATTR_DOG_STATE] = constants.DOG_STATE_QUIET
+        self.dog_affected_prob *= constants.DOG_MEMORY_DECAY
+
         m = mess.MHMessage(self.event_queue, state_mess)
         self.event_queue.write(m)
 
@@ -140,6 +150,8 @@ class RemoteHub:
         m[constants.ATTR_SOUND_FILE] = sound_file
         m[constants.ATTR_VOLUME_LEVEL] = str(volume_level)
         self.hub_queue_down.write(m)
+        # Simulate effect on dog - less likely to bark after playing a sound
+        self.dog_affected_prob = constants.EFFECTS[sound_file] * int(volume_level) * constants.VOLUME_EFFECT
 
 
 if __name__ == '__main__':

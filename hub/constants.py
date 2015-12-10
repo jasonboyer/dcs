@@ -47,6 +47,7 @@ MFCCS_PER_RECORD = 10
 # Sound playing parameters
 ATTR_SOUND_FILE = 'SoundFile'
 ATTR_VOLUME_LEVEL = 'VolumeLevel'
+SOUNDS = [None, 'thunder.wav', 'enh.wav', 'no.wav', 'rustycrate.wav']
 
 # Reinforcement learning parameters
 RL_MESS_CHUNK = 10
@@ -56,5 +57,9 @@ REWARD_SOUND_LOUD = -20
 REWARD_SOUND_MEDIUM = -10
 REWARD_SOUND_LOW = -5
 REWARD_SOUND_NONE = 0
+
+EFFECTS = {'thunder.wav': 0.3, 'enh.wav': 0.2, 'no.wav': 0.05, 'rustycrate.wav': 0.2}
+VOLUME_EFFECT = 0.5
+DOG_MEMORY_DECAY = 0.75
 
 EPISODE_TIME = 300
